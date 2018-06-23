@@ -1,0 +1,25 @@
+{
+  "name": "apollo-fragment-list-link",
+  "version": "0.0.1",
+  "description": "'retrive all avaiable fragments from apollo-inmemory-cache'",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "apollo-client",
+    "fragment",
+    "apollo-inmemory-cache",
+    "fragment-list",
+    "link"
+  ],
+  "author": "anujkosambi@gmail.com",
+  "license": "MIT",
+  "peerDependencies": {
+    "apollo-link": "^1.2.2",
+    "graphql-tag": "^2.9.2"
+  },
+  "dependencies": {
+    "apollo-utilities": "^1.0.16"
+  }
+}
