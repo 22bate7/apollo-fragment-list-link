@@ -1,12 +1,13 @@
 import resolve from 'rollup-plugin-local-resolve';
 import sourcemaps from 'rollup-plugin-sourcemaps';
+import babel from 'rollup-plugin-babel';
 
 const globals = {};
 
 export default {
-  input: 'lib/index.js',
+  input: 'src/index.js',
   output: {
-    file: 'lib/bundle.umd.js',
+    file: 'dist/bundle.umd.js',
     format: 'umd',
     name: 'apollo-fragment-list-link',
     exports: 'named',
@@ -15,7 +16,11 @@ export default {
   },
   external: Object.keys(globals),
   onwarn,
-  plugins: [resolve(), sourcemaps()],
+  plugins: [
+    resolve(),
+    sourcemaps(),
+    babel(),
+  ],
 };
 
 function onwarn(message) {
