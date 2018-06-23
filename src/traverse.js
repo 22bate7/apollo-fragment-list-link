@@ -3,13 +3,13 @@ import {
   shouldInclude,
   isField,
   resultKeyNameFromField,
-  toIdValue
-} from "apollo-utilities";
+  toIdValue,
+} from 'apollo-utilities';
 
 function traverseSelections(
   selectionSet = {},
   result = {},
-  { fragmentMap, variables = {}, context = {}, output = {} } = {}
+  { fragmentMap, variables = {}, context = {}, output = {} } = {},
 ) {
   const staticContextArgs = { fragmentMap, variables, context, output };
 
@@ -38,8 +38,8 @@ function traverseSelections(
         }
       }
 
-      const cacheKey = context.getCacheKey(value);
-      if (isObject && cacheKey) {
+      if (isObject && value && context.getCacheKey(value)) {
+        const cacheKey = context.getCacheKey(value);
         //
         const typename = value.__typename;
         if (!output[typename]) {
@@ -48,9 +48,9 @@ function traverseSelections(
         output[typename][cacheKey] = toIdValue(
           {
             id: value.id,
-            __typename: typename
+            __typename: typename,
           },
-          true
+          true,
         );
       }
     } else {
