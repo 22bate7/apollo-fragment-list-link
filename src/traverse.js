@@ -16,7 +16,7 @@ function traverseSelections(
   (selectionSet.selections || []).forEach(selection => {
     //TODO use
     const checkIfShouldInclude = shouldInclude(selection, variables);
-    if (!checkIfShouldInclude) {
+    if (!checkIfShouldInclude || !result) {
       return;
     }
     if (isField(selection)) {
@@ -31,7 +31,11 @@ function traverseSelections(
       if (selection.selectionSet) {
         if (isArray) {
           value.forEach(item => {
-            traverseSelections(selection.selectionSet, item, staticContextArgs);
+            traverseSelections(
+              { ...selectionSet, selections: [selection] },
+              { nodes: item },
+              staticContextArgs,
+            );
           });
         } else {
           traverseSelections(selection.selectionSet, value, staticContextArgs);
