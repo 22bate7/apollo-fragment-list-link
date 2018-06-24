@@ -39,7 +39,7 @@ After queries listed above, partial cache status will be
 
 (without apollo-fragment-list-link)
 
-```json
+```js
 {
     $ROOT_QUERY.fetchSuggestion.(token:"Exa"): [...],
     $ROOT_QUERY.fetchSuggestion.(token:"To"): [...],
@@ -53,7 +53,7 @@ After queries listed above, partial cache status will be
 
 (with apollo-fragment-list-link)
 
-```
+```js
 {
 	$ROOT_QUERY.allSuggestions: {
 	  totalCount
@@ -141,7 +141,7 @@ export const client = new ApolloClient({
 
 ```
 
-####Usage
+#### Usage
 
 ```js
 const GET_SUGGESTIONS = gql`
