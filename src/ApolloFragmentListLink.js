@@ -93,7 +93,7 @@ class ApolloFragmentListLink extends ApolloLink {
     createLocalCacheKey,
     createConnectionTypename,
     fragmentTypeDefs = [],
-    filterOperatorArgs = DEFAULT_OPERATORS,
+    filterOperatorDirectives = DEFAULT_OPERATORS,
   }) {
     super();
     this.cache = cache;
@@ -102,7 +102,7 @@ class ApolloFragmentListLink extends ApolloLink {
     this.fragmentTypeDefs = fragmentTypeDefs;
     this.createConnectionTypename =
       createConnectionTypename || this._defaultCreateConnectionTypename;
-    this.filterOperatorArgs = filterOperatorArgs;
+    this.filterOperatorDirectives = filterOperatorDirectives;
   }
 
   _defaultCreateLocalCacheKey = ({ typename }) => {
@@ -136,7 +136,7 @@ class ApolloFragmentListLink extends ApolloLink {
     }, {});
   };
 
-  _createResolver = ({ typename, fragment, name } = {}, { args } = {}) => {
+  _createResolver = ({ typename, fragment, name } = {}, { info } = {}) => {
     const localCacheKey = this.createLocalCacheKey({ typename });
     //TODO ask for fragment
     const query = gql`
@@ -166,8 +166,8 @@ class ApolloFragmentListLink extends ApolloLink {
 
     return processArgs(
       result,
-      { args },
-      { operators: this.filterOperatorArgs },
+      { info },
+      { operators: this.filterOperatorDirectives },
     );
   };
 

@@ -1,4 +1,5 @@
 import _uniqBy from 'lodash/uniqBy';
+import _get from 'lodash/get';
 
 import { toIdValue } from 'apollo-utilities';
 
@@ -62,16 +63,20 @@ const filteringResult = (nodes, ite = () => {}) => {
   };
 };
 
-export const processArgs = (result, { args } = {}, { operators } = {}) => {
+export const processArgs = (result, { info } = {}, { operators } = {}) => {
+  const filterDirective = _get(info, ['directives', 'filter']);
+  if (!filterDirective) {
+    return result;
+  }
   const output = { ...result, nodes: [...result.nodes] };
   const applyOperator = createApplyOperator(operators);
 
-  Object.keys(args || {}).forEach(key => {
-    const argInput = args[key];
+  Object.keys(filterDirective || {}).forEach(key => {
+    const argInput = filterDirective[key];
     const nodes = output.nodes;
 
     switch (key) {
-      case 'filter': {
+      case 'with': {
         Object.assign(
           output,
           filteringResult(nodes, item => {
