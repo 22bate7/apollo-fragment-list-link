@@ -33,7 +33,7 @@ function traverseSelections(
           value.forEach(item => {
             traverseSelections(
               { ...selectionSet, selections: [selection] },
-              { nodes: item },
+              { [resultFieldKey]: item },
               staticContextArgs,
             );
           });

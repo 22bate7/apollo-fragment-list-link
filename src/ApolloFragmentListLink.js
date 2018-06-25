@@ -1,15 +1,19 @@
-import { ApolloLink, Observable } from "apollo-link";
-import gql from "graphql-tag";
+import { ApolloLink, Observable } from 'apollo-link';
+import gql from 'graphql-tag';
 
 import {
   getOperationDefinition,
   getFragmentDefinition,
   getFragmentDefinitions,
-  createFragmentMap
-} from "apollo-utilities";
+  createFragmentMap,
+} from 'apollo-utilities';
 
-import { iterateOnTypename, createTransformerCacheIdValueNode } from "./utils";
-import traverseSelections from "./traverse";
+import {
+  iterateOnTypename,
+  createTransformerCacheIdValueNode,
+  processArgs,
+} from './utils';
+import traverseSelections from './traverse';
 
 function writeAllFragmentsToCache(
   cache,
@@ -20,8 +24,8 @@ function writeAllFragmentsToCache(
     variables,
     output = {},
     createLocalCacheKey,
-    createConnectionTypename
-  } = {}
+    createConnectionTypename,
+  } = {},
 ) {
   const document = cache.transformDocument(query);
   const operationDefinition = getOperationDefinition(document);
@@ -32,7 +36,7 @@ function writeAllFragmentsToCache(
     fragmentMap,
     variables,
     context,
-    output
+    output,
   });
 
   const resolvedFragmentIds = Object.keys(output);
@@ -48,14 +52,14 @@ function writeAllFragmentsToCache(
                     totalCount
                     nodes
                 }
-                }`
+                }`,
         });
         const transformer = createTransformerCacheIdValueNode(cache, typename);
         return (keys.nodes || []).map(transformer);
       } catch (error) {
         return [];
       }
-    }
+    },
   });
 
   const data = iterateOnTypename({
@@ -66,11 +70,19 @@ function writeAllFragmentsToCache(
       const values = output[typename] || {};
       return Object.values(values);
     },
-    initial: currentData
+    initial: currentData,
   });
 
   cache.writeData({ data });
 }
+
+const DEFAULT_OPERATORS = {
+  eq: (operand, value) => operand === value,
+  lt: (operand, value) => operand < value,
+  gt: (operand, value) => operand < value,
+  lte: (operand, value) => operand <= value,
+  gte: (operand, value) => operand <= value,
+};
 
 /**
  *  Afterware for apollo-http-link
@@ -80,7 +92,8 @@ class ApolloFragmentListLink extends ApolloLink {
     cache,
     createLocalCacheKey,
     createConnectionTypename,
-    fragmentTypeDefs = []
+    fragmentTypeDefs = [],
+    filterOperatorArgs = DEFAULT_OPERATORS,
   }) {
     super();
     this.cache = cache;
@@ -89,6 +102,7 @@ class ApolloFragmentListLink extends ApolloLink {
     this.fragmentTypeDefs = fragmentTypeDefs;
     this.createConnectionTypename =
       createConnectionTypename || this._defaultCreateConnectionTypename;
+    this.filterOperatorArgs = filterOperatorArgs;
   }
 
   _defaultCreateLocalCacheKey = ({ typename }) => {
@@ -108,18 +122,21 @@ class ApolloFragmentListLink extends ApolloLink {
       return {
         ...accum,
         ...{
-          [localCacheKey]: () =>
-            this._createResolver({
-              typename,
-              fragment: fragmentTypeDef,
-              name: fragmentDefinition.name.value
-            })
-        }
+          [localCacheKey]: (rootValue, args, context, info) =>
+            this._createResolver(
+              {
+                typename,
+                fragment: fragmentTypeDef,
+                name: fragmentDefinition.name.value,
+              },
+              { rootValue, args, context, info },
+            ),
+        },
       };
     }, {});
   };
 
-  _createResolver = ({ typename, fragment, name } = {}) => {
+  _createResolver = ({ typename, fragment, name } = {}, { args } = {}) => {
     const localCacheKey = this.createLocalCacheKey({ typename });
     //TODO ask for fragment
     const query = gql`
@@ -137,15 +154,21 @@ class ApolloFragmentListLink extends ApolloLink {
     let result = {
       nodes: [],
       totalCount: 0,
-      __typename: this.createConnectionTypename({ typename })
+      __typename: this.createConnectionTypename({ typename }),
     };
 
     try {
       const data = cache.readQuery({ query });
-      result = data.result || [];
+      if (data.result) {
+        result = data.result;
+      }
     } catch (ex) {}
 
-    return result;
+    return processArgs(
+      result,
+      { args },
+      { operators: this.filterOperatorArgs },
+    );
   };
 
   request(operation, forward) {
@@ -160,7 +183,7 @@ class ApolloFragmentListLink extends ApolloLink {
               variables: operation.variables,
               context: operation.getContext(),
               createLocalCacheKey: this.createLocalCacheKey,
-              createConnectionTypename: this.createConnectionTypename
+              createConnectionTypename: this.createConnectionTypename,
             });
           },
           error: networkError => {
@@ -168,7 +191,7 @@ class ApolloFragmentListLink extends ApolloLink {
           },
           complete: () => {
             observer.complete.bind(observer)();
-          }
+          },
         });
       } catch (error) {
         observer.error(error);
