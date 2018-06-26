@@ -1,6 +1,6 @@
 {
     "name": "apollo-fragment-list-link",
-    "version": "0.0.3-beta",
+    "version": "0.0.3",
     "description": "'Read all available fragments from apollo-inmemory-cache'",
     "main": "dist/bundle.umd.js",
     "scripts": {
