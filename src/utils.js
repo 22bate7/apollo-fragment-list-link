@@ -59,7 +59,14 @@ function createApplyOperator(operators) {
     if (!operation) {
       return false;
     }
-    return operation(operand, value);
+    const expectedResult = operation(operand, value);
+    if (expectedResult) {
+      return;
+    }
+    if (value instanceof Date && !isNaN(Date.parse(operand))) {
+      return operation(Date.parse(operand), value);
+    }
+    return false;
   };
 }
 
