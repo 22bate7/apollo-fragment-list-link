@@ -11,6 +11,7 @@ import {
 import {
   iterateOnTypename,
   createTransformerCacheIdValueNode,
+  createCachableFragmentMap,
   processArgs,
 } from './utils';
 import traverseSelections from './traverse';
@@ -23,6 +24,7 @@ function writeAllFragmentsToCache(
     context,
     variables,
     output = {},
+    cachableFragmentMap = {},
     createLocalCacheKey,
     createConnectionTypename,
   } = {},
@@ -34,6 +36,7 @@ function writeAllFragmentsToCache(
 
   traverseSelections(selectionSet, result, {
     fragmentMap,
+    cachableFragmentMap,
     variables,
     context,
     output,
@@ -178,8 +181,14 @@ class ApolloFragmentListLink extends ApolloLink {
         subscription = forward(operation).subscribe({
           next: result => {
             observer.next(result);
+
+            const cachableFragmentMap = createCachableFragmentMap(
+              this.fragmentTypeDefs,
+            );
+
             writeAllFragmentsToCache(this.cache, operation.query, {
               result: result.data,
+              cachableFragmentMap,
               variables: operation.variables,
               context: operation.getContext(),
               createLocalCacheKey: this.createLocalCacheKey,

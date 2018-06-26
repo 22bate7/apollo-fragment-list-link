@@ -1,7 +1,7 @@
 import _uniqBy from 'lodash/uniqBy';
 import _get from 'lodash/get';
 
-import { toIdValue } from 'apollo-utilities';
+import { toIdValue, getFragmentDefinition } from 'apollo-utilities';
 
 export function iterateOnTypename({
   createLocalCacheKey,
@@ -30,6 +30,14 @@ export function iterateOnTypename({
       },
     };
   }, initial);
+}
+
+export function createCachableFragmentMap(fragmentTypeDefs) {
+  return fragmentTypeDefs.reduce((accum, fragmentTypeDef) => {
+    const fragmentDefinition = getFragmentDefinition(fragmentTypeDef);
+    const typename = fragmentDefinition.typeCondition.name.value;
+    return { ...accum, ...{ [typename]: fragmentTypeDef } };
+  }, {});
 }
 
 export function createTransformerCacheIdValueNode(cache, typename) {

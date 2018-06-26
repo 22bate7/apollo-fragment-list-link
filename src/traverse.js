@@ -9,9 +9,21 @@ import {
 function traverseSelections(
   selectionSet = {},
   result = {},
-  { fragmentMap, variables = {}, context = {}, output = {} } = {},
+  {
+    fragmentMap,
+    variables = {},
+    context = {},
+    output = {},
+    cachableFragmentMap = {},
+  } = {},
 ) {
-  const staticContextArgs = { fragmentMap, variables, context, output };
+  const staticContextArgs = {
+    fragmentMap,
+    variables,
+    context,
+    output,
+    cachableFragmentMap,
+  };
 
   (selectionSet.selections || []).forEach(selection => {
     //TODO use
@@ -49,13 +61,30 @@ function traverseSelections(
         if (!output[typename]) {
           output[typename] = {};
         }
-        output[typename][cacheKey] = toIdValue(
-          {
-            id: value.id,
-            __typename: typename,
-          },
-          true,
-        );
+        try {
+          if (!cachableFragmentMap[typename]) {
+            return;
+          }
+          /**
+           * check if cached fragment has all fields that can be read by readQuery later
+           */
+          const fragmentValue = context.cache.readFragment({
+            id: cacheKey,
+            fragment: cachableFragmentMap[typename],
+          });
+          if (!fragmentValue) {
+            return;
+          }
+          output[typename][cacheKey] = toIdValue(
+            {
+              id: value.id,
+              __typename: typename,
+            },
+            true,
+          );
+        } catch (ex) {
+          //skip
+        }
       }
     } else {
       const fragment = getFragment(selection, fragmentMap);
