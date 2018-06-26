@@ -71,6 +71,49 @@ const filteringResult = (nodes, ite = () => {}) => {
   };
 };
 
+const SORT_PARAMS = {
+  ASC: 1,
+  DESC: -1,
+};
+
+function sortResultNodes(nodes, argInput) {
+  const params = (argInput || '').split('__');
+  const [sortParam] = params.splice(-1);
+  if (
+    params.length < 1 ||
+    !sortParam ||
+    !Object.keys(SORT_PARAMS).find(p => p === sortParam)
+  ) {
+    return nodes;
+  }
+  const fieldParamKey = [...params].join('__');
+
+  if (!fieldParamKey || !sortParam) {
+    return nodes;
+  }
+  return (nodes || []).sort((item = {}, comparator = {}) => {
+    const fieldToSort = item[fieldParamKey];
+    const fieldToCompare = comparator[fieldParamKey];
+    const direction = SORT_PARAMS[sortParam];
+
+    if (
+      (typeof fieldToSort === typeof 0) &
+      (typeof fieldToCompare === typeof 0)
+    ) {
+      return fieldToSort * direction - fieldToCompare * direction;
+    } else if (
+      !isNaN(Date.parse(fieldToSort)) &&
+      !isNaN(Date.parse(fieldToCompare))
+    ) {
+      return (
+        Date.parse(fieldToSort) * direction -
+        Date.parse(fieldToCompare) * direction
+      );
+    }
+    return 0;
+  });
+}
+
 export const processArgs = (result, { info } = {}, { operators } = {}) => {
   const filterDirective = _get(info, ['directives', 'filter']);
   if (!filterDirective) {
@@ -116,6 +159,18 @@ export const processArgs = (result, { info } = {}, { operators } = {}) => {
             );
           }),
         );
+        break;
+      }
+      case 'orderBy': {
+        if (typeof argInput !== typeof '') {
+          break;
+        }
+        const sortedNodes = sortResultNodes(nodes, argInput);
+
+        Object.assign(output, {
+          nodes: sortedNodes,
+          totalCount: sortedNodes.length,
+        });
         break;
       }
       case 'condition': {
