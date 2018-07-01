@@ -121,6 +121,20 @@ function sortResultNodes(nodes, argInput) {
   });
 }
 
+function checkWithArgument(item, argInput, argInputKey, applyOperator) {
+  const [fieldKey, operator] = [...argInputKey.split('__'), null, null];
+  const argValue = argInput[argInputKey];
+  const argValueIsObject = !!argValue && (typeof argValue  === typeof {});
+  if ((!operator || !fieldKey) && !argValueIsObject) {
+    return false;
+  } else if(argValueIsObject) {
+    return Object.keys(argValue).every(argValueInputKey => {
+      return checkWithArgument(item[argInput] || {}, argValue, argValueInputKey, applyOperator);
+    });
+  }
+  return applyOperator(item[fieldKey], operator, argInput[argInputKey]);
+}
+
 export const processArgs = (result, { info } = {}, { operators } = {}) => {
   const filterDirective = _get(info, ['directives', 'filter']);
   if (!filterDirective) {
@@ -139,19 +153,7 @@ export const processArgs = (result, { info } = {}, { operators } = {}) => {
           output,
           filteringResult(nodes, item => {
             return Object.keys(argInput).every(argInputKey => {
-              const [fieldKey, operator] = [
-                ...argInputKey.split('__'),
-                null,
-                null,
-              ];
-              if (!operator || !fieldKey) {
-                return false;
-              }
-              return applyOperator(
-                item[fieldKey],
-                operator,
-                argInput[argInputKey],
-              );
+              return checkWithArgument(item, argInput, argInputKey, applyOperator);
             });
           }),
         );
