@@ -1,4 +1,5 @@
 import { ApolloLink, Observable } from 'apollo-link';
+
 import gql from 'graphql-tag';
 
 import {
@@ -12,7 +13,6 @@ import {
   iterateOnTypename,
   createTransformerCacheIdValueNode,
   createCachableFragmentMap,
-  processArgs,
 } from './utils';
 import traverseSelections from './traverse';
 
@@ -79,24 +79,15 @@ function writeAllFragmentsToCache(
   cache.writeData({ data });
 }
 
-const DEFAULT_OPERATORS = {
-  eq: (operand, value) => operand === value,
-  lt: (operand, value) => operand < value,
-  gt: (operand, value) => operand < value,
-  lte: (operand, value) => operand <= value,
-  gte: (operand, value) => operand <= value,
-};
-
 /**
  *  Afterware for apollo-http-link
  */
-class ApolloFragmentListLink extends ApolloLink {
+class CacheQueryLink extends ApolloLink {
   constructor({
     cache,
     createLocalCacheKey,
     createConnectionTypename,
     fragmentTypeDefs = [],
-    filterOperatorDirectives = DEFAULT_OPERATORS,
   }) {
     super();
     this.cache = cache;
@@ -105,7 +96,6 @@ class ApolloFragmentListLink extends ApolloLink {
     this.fragmentTypeDefs = fragmentTypeDefs;
     this.createConnectionTypename =
       createConnectionTypename || this._defaultCreateConnectionTypename;
-    this.filterOperatorDirectives = filterOperatorDirectives;
   }
 
   _defaultCreateLocalCacheKey = ({ typename }) => {
@@ -167,11 +157,7 @@ class ApolloFragmentListLink extends ApolloLink {
       }
     } catch (ex) {}
 
-    return processArgs(
-      result,
-      { info },
-      { operators: this.filterOperatorDirectives },
-    );
+    return result;
   };
 
   request(operation, forward) {
@@ -214,4 +200,4 @@ class ApolloFragmentListLink extends ApolloLink {
   }
 }
 
-export default ApolloFragmentListLink;
+export default CacheQueryLink;

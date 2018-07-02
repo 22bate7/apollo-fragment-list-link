@@ -61,7 +61,7 @@ function createApplyOperator(operators) {
     }
     const expectedResult = operation(operand, value);
     if (expectedResult) {
-      return;
+      return true;
     }
     if (value instanceof Date && !isNaN(Date.parse(operand))) {
       return operation(Date.parse(operand), value);
@@ -124,12 +124,17 @@ function sortResultNodes(nodes, argInput) {
 function checkWithArgument(item, argInput, argInputKey, applyOperator) {
   const [fieldKey, operator] = [...argInputKey.split('__'), null, null];
   const argValue = argInput[argInputKey];
-  const argValueIsObject = !!argValue && (typeof argValue  === typeof {});
+  const argValueIsObject = !!argValue && typeof argValue === typeof {};
   if ((!operator || !fieldKey) && !argValueIsObject) {
     return false;
-  } else if(argValueIsObject) {
+  } else if (argValueIsObject && !operator && fieldKey) {
     return Object.keys(argValue).every(argValueInputKey => {
-      return checkWithArgument(item[argInput] || {}, argValue, argValueInputKey, applyOperator);
+      return checkWithArgument(
+        item[fieldKey] || {},
+        argValue,
+        argValueInputKey,
+        applyOperator,
+      );
     });
   }
   return applyOperator(item[fieldKey], operator, argInput[argInputKey]);
@@ -152,8 +157,13 @@ export const processArgs = (result, { info } = {}, { operators } = {}) => {
         Object.assign(
           output,
           filteringResult(nodes, item => {
-            return Object.keys(argInput).every(argInputKey => {
-              return checkWithArgument(item, argInput, argInputKey, applyOperator);
+            return Object.keys(argInput || {}).every(argInputKey => {
+              return checkWithArgument(
+                item,
+                argInput,
+                argInputKey,
+                applyOperator,
+              );
             });
           }),
         );
@@ -163,7 +173,7 @@ export const processArgs = (result, { info } = {}, { operators } = {}) => {
         Object.assign(
           output,
           filteringResult(nodes, item => {
-            return Object.keys(argInput).every(argInputKey =>
+            return Object.keys(argInput || {}).every(argInputKey =>
               new RegExp(argInput[argInputKey] || '').test(item[argInputKey]),
             );
           }),
@@ -186,7 +196,7 @@ export const processArgs = (result, { info } = {}, { operators } = {}) => {
         Object.assign(
           output,
           filteringResult(nodes, item => {
-            return Object.keys(argInput).every(
+            return Object.keys(argInput || {}).every(
               argInputKey => item[argInputKey] === argInput[argInputKey],
             );
           }),
