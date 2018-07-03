@@ -43,6 +43,9 @@ class FilterDirectiveLink extends ApolloLink {
       try {
         subscription = forward(operation).subscribe({
           next: result => {
+            if (!result.data) {
+                observer.next(result);
+            }
             const processedData = graphql(
               this._filterResolver,
               operation.query,
