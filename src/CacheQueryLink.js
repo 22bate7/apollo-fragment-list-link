@@ -124,7 +124,7 @@ class CacheQueryLink extends ApolloLink {
         ...accum,
         ...{
           [localCacheKey]: (rootValue, args, context, info) =>
-            this._createResolver(
+            this._typeResolver(
               {
                 typename,
                 fragment: fragmentTypeDef,
@@ -137,7 +137,23 @@ class CacheQueryLink extends ApolloLink {
     }, {});
   };
 
-  _createResolver = ({ typename, fragment, name } = {}, { info } = {}) => {
+  readNodesOnType = typename => {
+    const fragment = this.getFragmentByTypename(typename);
+    if (!fragment) {
+      return null;
+    }
+    const fragmentDefinition = getFragmentDefinition(fragment);
+    if (!fragmentDefinition) {
+      return null;
+    }
+    return this._typeResolver({
+      typename,
+      fragment,
+      name: fragmentDefinition.name.value,
+    });
+  };
+
+  _typeResolver = ({ typename, fragment, name } = {}, { info } = {}) => {
     const localCacheKey = this.createLocalCacheKey({ typename });
     //TODO ask for fragment
     const query = gql`
