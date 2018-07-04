@@ -29,10 +29,10 @@ export function createCacheQueryLink({
             ...accum,
             [key]: _castArray(nodes).reduce((nodeAccum, item) => {
               const joinKey = _upperFirst(item.field);
-              const resolverKey = `${cacheQueryLink.createLocalCacheKey({
-                typename: key,
-              })}By${joinKey}`;
               const typename = item.typename;
+              const resolverKey = `${cacheQueryLink.createLocalCacheKey({
+                typename,
+              })}By${joinKey}`;
 
               const fragment = cacheQueryLink.getFragmentByTypename(typename);
               if (!fragment) {
@@ -40,10 +40,11 @@ export function createCacheQueryLink({
               }
               return {
                 ...nodeAccum,
-                [resolverKey]: (data = {}) => cache.readFragment({
-                  id: `${typename}:${data[item.field]}`,
-                  fragment,
-                }),
+                [resolverKey]: (data = {}) =>
+                  cache.readFragment({
+                    id: `${typename}:${data[item.field]}`,
+                    fragment,
+                  }),
               };
             }, {}),
           };
