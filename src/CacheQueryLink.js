@@ -106,6 +106,14 @@ class CacheQueryLink extends ApolloLink {
     return `All${typename}Connection`;
   };
 
+  getFragmentByTypename = typename => {
+    return (this.fragmentTypeDefs || []).find(item => {
+      const fragmentDefinition = getFragmentDefinition(item);
+      const fragmentTypename = fragmentDefinition.typeCondition.name.value;
+      return typename === fragmentTypename;
+    });
+  };
+
   createStateLinkResolvers = () => {
     return this.fragmentTypeDefs.reduce((accum, fragmentTypeDef) => {
       const fragmentDefinition = getFragmentDefinition(fragmentTypeDef);
