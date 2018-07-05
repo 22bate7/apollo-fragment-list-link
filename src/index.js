@@ -10,7 +10,7 @@ import FilterDirectiveLink from './FilterDirectiveLink';
 import { withClientState } from 'apollo-link-state';
 
 function createJoinKey({ cacheQueryLink, typename, joinKey } = {}) {
-  return `${cacheQueryLink.createLocalCacheKey({
+  return `${cacheQueryLink.createCacheReadKey({
     typename,
   })}By${joinKey}`;
 }
@@ -50,7 +50,8 @@ export function createCacheQueryLink({
   const stateLink = withClientState({
     ...stateLinkConfig,
     resolvers: _merge(stateLinkConfig.resolvers, {
-      Query: cacheQueryLink.createStateLinkResolvers(),
+      Mutation: cacheQueryLink.createStateLinkMutationResolvers(),
+      Query: cacheQueryLink.createStateLinkQueryResolvers(),
       ..._reduce(
         joinConnection,
         (accum, nodes, key) => {

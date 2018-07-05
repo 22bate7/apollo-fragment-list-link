@@ -1,4 +1,6 @@
 import { ApolloLink, Observable } from 'apollo-link';
+import _get from 'lodash/get';
+import _size from 'lodash/size';
 
 import gql from 'graphql-tag';
 
@@ -85,25 +87,81 @@ function writeAllFragmentsToCache(
 class CacheQueryLink extends ApolloLink {
   constructor({
     cache,
-    createLocalCacheKey,
+    createCacheReadKey,
+    createCacheRemoveKey,
     createConnectionTypename,
     fragmentTypeDefs = [],
   }) {
     super();
     this.cache = cache;
-    this.createLocalCacheKey =
-      createLocalCacheKey || this._defaultCreateLocalCacheKey;
-    this.fragmentTypeDefs = fragmentTypeDefs;
+    //
+    this.createCacheReadKey =
+      createCacheReadKey || this._defaultCreateCacheReadKey;
+    this.createCacheRemoveKey =
+      createCacheRemoveKey || this._defaultCreateCacheRemoveKey;
+    //
     this.createConnectionTypename =
       createConnectionTypename || this._defaultCreateConnectionTypename;
+    //
+    this.fragmentTypeDefs = fragmentTypeDefs;
   }
 
-  _defaultCreateLocalCacheKey = ({ typename }) => {
+  _defaultCreateCacheReadKey = ({ typename }) => {
     return `all${typename}`;
+  };
+
+  _defaultCreateCacheRemoveKey = ({ typename }) => {
+    return `remove${typename}`;
   };
 
   _defaultCreateConnectionTypename = ({ typename }) => {
     return `All${typename}Connection`;
+  };
+
+  _createRemoveMutationResolver = ({
+    fragmentDoc,
+    fragmentName,
+    typename,
+  } = {}) => (rootValue, args, context, info) => {
+    const idToRemove = _get(args, ['id']);
+    if (!idToRemove) {
+      return false;
+    }
+    const cache = this.cache;
+    const currentResults = this._typeResolver(
+      {
+        typename,
+        fragment: fragmentDoc,
+        name: fragmentName,
+      },
+      { rootValue, args, context, info },
+    );
+    if (
+      !_get(currentResults, 'totalCount') ||
+      _size(currentResults, 'nodes') < 1
+    ) {
+      return false;
+    }
+    const cacheKey = this.createCacheReadKey({ typename });
+
+    cache.writeData({
+      data: {
+        [cacheKey]: {
+          ...currentResults,
+          nodes: _get(currentResults, ['nodes'], []).filter(
+            (item = {}) => item.id !== idToRemove,
+          ),
+          totalCount: currentResults.totalCount - 1,
+          __typename: this.createConnectionTypename({ typename }),
+        },
+      },
+    });
+    cache.writeFragment({
+      id: idToRemove,
+      fragment: fragmentDoc,
+      data: null
+    });
+    return true;
   };
 
   getFragmentByTypename = typename => {
@@ -114,16 +172,23 @@ class CacheQueryLink extends ApolloLink {
     });
   };
 
-  createStateLinkResolvers = () => {
+  createStateLinkQueryResolvers = () => {
     return this.fragmentTypeDefs.reduce((accum, fragmentTypeDef) => {
       const fragmentDefinition = getFragmentDefinition(fragmentTypeDef);
-      const typename = fragmentDefinition.typeCondition.name.value;
-      const localCacheKey = this.createLocalCacheKey({ typename });
+      const typename = _get(fragmentDefinition, [
+        'typeCondition',
+        'name',
+        'value',
+      ]);
+      if (!typename) {
+        return accum;
+      }
+      const readCacheKey = this.createCacheReadKey({ typename });
 
       return {
         ...accum,
         ...{
-          [localCacheKey]: (rootValue, args, context, info) =>
+          [readCacheKey]: (rootValue, args, context, info) =>
             this._typeResolver(
               {
                 typename,
@@ -132,6 +197,33 @@ class CacheQueryLink extends ApolloLink {
               },
               { rootValue, args, context, info },
             ),
+        },
+      };
+    }, {});
+  };
+
+  createStateLinkMutationResolvers = () => {
+    return (this.fragmentTypeDefs || []).reduce((accum, fragmentTypeDef) => {
+      const fragmentDefinition = getFragmentDefinition(fragmentTypeDef);
+      const typename = _get(fragmentDefinition, [
+        'typeCondition',
+        'name',
+        'value',
+      ]);
+      const fragmentName = _get(fragmentDefinition, ['name', 'value']);
+      if (!typename || !fragmentName) {
+        return accum;
+      }
+      const localRemoveKey = this.createCacheRemoveKey({ typename });
+
+      return {
+        ...accum,
+        ...{
+          [localRemoveKey]: this._createRemoveMutationResolver({
+            fragmentDoc: fragmentTypeDef,
+            fragmentName,
+            typename,
+          }),
         },
       };
     }, {});
@@ -154,7 +246,7 @@ class CacheQueryLink extends ApolloLink {
   };
 
   _typeResolver = ({ typename, fragment, name } = {}, { info } = {}) => {
-    const localCacheKey = this.createLocalCacheKey({ typename });
+    const localCacheKey = this.createCacheReadKey({ typename });
     //TODO ask for fragment
     const query = gql`
       query fetchResult{
@@ -201,7 +293,7 @@ class CacheQueryLink extends ApolloLink {
               cachableFragmentMap,
               variables: operation.variables,
               context: operation.getContext(),
-              createLocalCacheKey: this.createLocalCacheKey,
+              createLocalCacheKey: this.createCacheReadKey,
               createConnectionTypename: this.createConnectionTypename,
             });
           },

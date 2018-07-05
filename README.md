@@ -118,7 +118,7 @@ const fragmentLink = new ApolloFragmentLink({
     `,
   ],
   // @optional
-  createLocalCacheKey: ({typename}) => `all${typename}`,
+  createCacheReadKey: ({typename}) => `all${typename}`,
   // @optional 
   createConnectionTypename: ({typename}) => `All${typename}Connection`,
 });
@@ -127,7 +127,7 @@ const stateLink = withClientState({
   cache,
   resolvers: {
     Query: {
-     	...fragmentLink.createStateLinkResolvers()
+     	...fragmentLink.createStateLinkQueryResolvers()
     },
   }
 });
