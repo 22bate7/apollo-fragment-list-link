@@ -44,7 +44,7 @@ class FilterDirectiveLink extends ApolloLink {
         subscription = forward(operation).subscribe({
           next: result => {
             if (!result.data) {
-                observer.next(result);
+              observer.next(result);
             }
             const processedData = graphql(
               this._filterResolver,
@@ -53,7 +53,10 @@ class FilterDirectiveLink extends ApolloLink {
               result.data,
               operation.variables,
             );
-            observer.next({ ...result, data: processedData });
+            observer.next({
+              ...result,
+              data: { ...result.data, ...processedData },
+            });
           },
           error: networkError => {
             observer.error(networkError);

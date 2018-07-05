@@ -1,6 +1,7 @@
 import { ApolloLink, Observable } from 'apollo-link';
 import _get from 'lodash/get';
 import _size from 'lodash/size';
+import _castArray from 'lodash/castArray';
 
 import gql from 'graphql-tag';
 
@@ -123,8 +124,8 @@ class CacheQueryLink extends ApolloLink {
     fragmentName,
     typename,
   } = {}) => (rootValue, args, context, info) => {
-    const idToRemove = _get(args, ['id']);
-    if (!idToRemove) {
+    const idSet = new Set(_castArray(_get(args, ['id'], [])));
+    if (idSet.size < 1) {
       return false;
     }
     const cache = this.cache;
@@ -144,23 +145,31 @@ class CacheQueryLink extends ApolloLink {
     }
     const cacheKey = this.createCacheReadKey({ typename });
 
+    const updatedNodes = _get(currentResults, ['nodes'], []).filter(
+      (item = {}) => !idSet.has(item.id),
+    );
+
     cache.writeData({
       data: {
         [cacheKey]: {
           ...currentResults,
-          nodes: _get(currentResults, ['nodes'], []).filter(
-            (item = {}) => item.id !== idToRemove,
-          ),
-          totalCount: currentResults.totalCount - 1,
+          nodes: updatedNodes,
+          totalCount: _size(updatedNodes),
           __typename: this.createConnectionTypename({ typename }),
         },
       },
     });
-    cache.writeFragment({
-      id: idToRemove,
-      fragment: fragmentDoc,
-      data: null
+
+    idSet.forEach(id => {
+      //
+      cache.writeFragment({
+        id,
+        fragment: fragmentDoc,
+        data: null,
+      });
+      //
     });
+
     return true;
   };
 
