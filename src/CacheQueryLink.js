@@ -16,6 +16,7 @@ import {
   iterateOnTypename,
   createTransformerCacheIdValueNode,
   createCachableFragmentMap,
+  createConnectionNode,
 } from './utils';
 import traverseSelections from './traverse';
 
@@ -55,6 +56,7 @@ function writeAllFragmentsToCache(
         const { keys = { nodes: [] } } = cache.readQuery({
           query: gql`{
                 keys:  ${localCacheKey} @client {
+                    __cacheNodeId
                     totalCount
                     nodes
                 }
@@ -79,6 +81,7 @@ function writeAllFragmentsToCache(
     initial: currentData,
   });
 
+  // write data
   cache.writeData({ data });
 }
 
@@ -149,14 +152,14 @@ class CacheQueryLink extends ApolloLink {
       (item = {}) => !idSet.has(item.id),
     );
 
+    //  write data
     cache.writeData({
       data: {
-        [cacheKey]: {
+        [cacheKey]: createConnectionNode({
           ...currentResults,
           nodes: updatedNodes,
-          totalCount: _size(updatedNodes),
           __typename: this.createConnectionTypename({ typename }),
-        },
+        }),
       },
     });
 
@@ -181,6 +184,26 @@ class CacheQueryLink extends ApolloLink {
     });
   };
 
+  createArrayJoinConnection({ typename, joinItem = {} } = {}) {
+    return (data = {}) => {
+      const result = this.readNodesOnType(typename);
+      const joinField = joinItem.field;
+      /**
+       * filtering on basis of parent node
+       */
+      const nodes = _get(result, ['nodes'], {}).filter(resultNode => {
+        return _get(resultNode, [joinField]) === _get(data, [joinField]);
+      });
+      return createConnectionNode({
+        ...result,
+        nodes,
+      });
+    };
+  }
+
+  /**
+   *  create resolvers for ROOT_QUERY
+   */
   createStateLinkQueryResolvers = () => {
     return this.fragmentTypeDefs.reduce((accum, fragmentTypeDef) => {
       const fragmentDefinition = getFragmentDefinition(fragmentTypeDef);
@@ -211,6 +234,9 @@ class CacheQueryLink extends ApolloLink {
     }, {});
   };
 
+  /**
+   * create resolvers for ROOT_MUTATIONS
+   */
   createStateLinkMutationResolvers = () => {
     return (this.fragmentTypeDefs || []).reduce((accum, fragmentTypeDef) => {
       const fragmentDefinition = getFragmentDefinition(fragmentTypeDef);
@@ -260,6 +286,7 @@ class CacheQueryLink extends ApolloLink {
     const query = gql`
       query fetchResult{
         result: ${localCacheKey} @client {
+            __cacheNodeId
             nodes {
                ...${name}
             }
@@ -269,11 +296,10 @@ class CacheQueryLink extends ApolloLink {
       ${fragment} 
     `;
     const cache = this.cache;
-    let result = {
+    let result = createConnectionNode({
       nodes: [],
-      totalCount: 0,
       __typename: this.createConnectionTypename({ typename }),
-    };
+    });
 
     try {
       const data = cache.readQuery({ query });

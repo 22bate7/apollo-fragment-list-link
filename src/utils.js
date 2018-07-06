@@ -22,11 +22,10 @@ export function iterateOnTypename({
     return {
       ...accum,
       ...{
-        [localCacheKey]: {
+        [localCacheKey]: createConnectionNode({
           nodes,
-          totalCount: nodes.length,
           __typename: createConnectionTypename({ typename }),
-        },
+        }),
       },
     };
   }, initial);
@@ -50,6 +49,27 @@ export function createTransformerCacheIdValueNode(cache, typename) {
       },
       true,
     );
+  };
+}
+
+export function generateLocalId() {
+  return (
+    Math.random()
+      .toString(36)
+      .substr(2) +
+    Math.random()
+      .toString(36)
+      .substr(2)
+  );
+}
+
+export function createConnectionNode({ nodes = [], __typename, ...rest }) {
+  return {
+    ...rest,
+    nodes,
+    __cacheNodeId: generateLocalId(),
+    __typename,
+    totalCount: nodes.length,
   };
 }
 

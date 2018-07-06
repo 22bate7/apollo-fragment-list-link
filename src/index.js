@@ -15,25 +15,6 @@ function createJoinKey({ cacheQueryLink, typename, joinKey } = {}) {
   })}By${joinKey}`;
 }
 
-function createArrayJoinConnection({
-  cacheQueryLink,
-  typename,
-  joinItem = {},
-} = {}) {
-  return (data = {}) => {
-    const result = cacheQueryLink.readNodesOnType(typename);
-    const joinField = joinItem.field;
-    const nodes = _get(result, ['nodes'], {}).filter(resultNode => {
-      return _get(resultNode, [joinField]) === _get(data, [joinField]);
-    });
-    return {
-      ...result,
-      nodes,
-      totalCount: nodes.length,
-    };
-  };
-}
-
 export function createCacheQueryLink({
   stateLinkConfig,
   filterOperatorDirectives,
@@ -71,8 +52,7 @@ export function createCacheQueryLink({
               if (_isArray(typename) && typename.length === 1) {
                 return {
                   ...nodeAccum,
-                  [resolverKey]: createArrayJoinConnection({
-                    cacheQueryLink,
+                  [resolverKey]: cacheQueryLink.createArrayJoinConnection({
                     typename: typename[0],
                     joinItem: item,
                   }),
