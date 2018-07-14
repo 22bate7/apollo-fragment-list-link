@@ -13,9 +13,9 @@ function getResolvedData(resultKey, context, rootValue) {
 const DEFAULT_OPERATORS = {
   eq: (operand, value) => operand === value,
   lt: (operand, value) => operand < value,
-  gt: (operand, value) => operand < value,
+  gt: (operand, value) => operand > value,
   lte: (operand, value) => operand <= value,
-  gte: (operand, value) => operand <= value,
+  gte: (operand, value) => operand >= value,
 };
 
 class FilterDirectiveLink extends ApolloLink {
