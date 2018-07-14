@@ -188,11 +188,12 @@ class CacheQueryLink extends ApolloLink {
     return (data = {}) => {
       const result = this.readNodesOnType(typename);
       const joinField = joinItem.field;
+      const connectionField = _get(joinItem, ['connectionId'], 'id');
       /**
        * filtering on basis of parent node
        */
       const nodes = _get(result, ['nodes'], {}).filter(resultNode => {
-        return _get(resultNode, [joinField]) === _get(data, [joinField]);
+        return _get(resultNode, [joinField]) === _get(data, [connectionField]);
       });
       return createConnectionNode({
         ...result,
