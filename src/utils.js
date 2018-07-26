@@ -194,7 +194,7 @@ export const processArgs = (result, { info } = {}, { operators } = {}) => {
           output,
           filteringResult(nodes, item => {
             return Object.keys(argInput || {}).every(argInputKey =>
-              new RegExp(argInput[argInputKey] || '').test(item[argInputKey]),
+              new RegExp(argInput[argInputKey] || '', 'i').test(item[argInputKey]),
             );
           }),
         );
