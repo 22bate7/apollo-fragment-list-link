@@ -3,6 +3,7 @@
     "version": "4.0.1-prealpha",
     "description": "'Read all available fragments from apollo-inmemory-cache'",
     "main": "dist/bundle.umd.js",
+    "files": ['dist/*'],
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "bundle": "rollup -c",
