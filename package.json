@@ -1,9 +1,11 @@
 {
     "name": "apollo-fragment-list-link",
-    "version": "4.0.1-prealpha",
+    "version": "4.0.1-alpha",
     "description": "'Read all available fragments from apollo-inmemory-cache'",
     "main": "dist/bundle.umd.js",
-    "files": ["dist/*"],
+    "files": [
+        "dist/*"
+    ],
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "bundle": "rollup -c",
