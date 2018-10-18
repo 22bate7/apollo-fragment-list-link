@@ -39,40 +39,42 @@ export function createCacheQueryLink({
           //
           return {
             ...accum,
-            [key]: _castArray(nodes).reduce((nodeAccum, item) => {
-              const joinKey = _upperFirst(item.field);
-              const typename = item.typename;
+            [key]: _castArray(nodes).reduce((nodeAccum, items) => {
+              return _castArray(items).reduce((itemAccum, item) => {
+                const joinKey = _upperFirst(item.field);
+                const typename = item.typename;
 
-              const resolverKey = createJoinKey({
-                cacheQueryLink,
-                typename: _isArray(typename) ? typename[0] : typename,
-                joinKey,
-              });
+                const resolverKey = createJoinKey({
+                  cacheQueryLink,
+                  typename: _isArray(typename) ? typename[0] : typename,
+                  joinKey,
+                });
 
-              if (_isArray(typename) && typename.length === 1) {
+                if (_isArray(typename) && typename.length === 1) {
+                  return {
+                    ...itemAccum,
+                    [resolverKey]: cacheQueryLink.createArrayJoinConnection({
+                      typename: typename[0],
+                      joinItem: item,
+                    }),
+                  };
+                } else if (_isArray(typename)) {
+                  return itemAccum;
+                }
+
+                const fragment = cacheQueryLink.getFragmentByTypename(typename);
+                if (!fragment) {
+                  return itemAccum;
+                }
                 return {
-                  ...nodeAccum,
-                  [resolverKey]: cacheQueryLink.createArrayJoinConnection({
-                    typename: typename[0],
-                    joinItem: item,
-                  }),
+                  ...itemAccum,
+                  [resolverKey]: (data = {}) =>
+                    cache.readFragment({
+                      id: `${typename}:${data[item.field]}`,
+                      fragment,
+                    }),
                 };
-              } else if (_isArray(typename)) {
-                return nodeAccum;
-              }
-
-              const fragment = cacheQueryLink.getFragmentByTypename(typename);
-              if (!fragment) {
-                return nodeAccum;
-              }
-              return {
-                ...nodeAccum,
-                [resolverKey]: (data = {}) =>
-                  cache.readFragment({
-                    id: `${typename}:${data[item.field]}`,
-                    fragment,
-                  }),
-              };
+              }, nodeAccum);
             }, {}),
           };
           //
