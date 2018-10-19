@@ -320,6 +320,10 @@ class CacheQueryLink extends ApolloLink {
           next: result => {
             observer.next(result);
 
+            if (_get(operation, ['query', 'noPersist'])) {
+              return;
+            }
+
             const cachableFragmentMap = createCachableFragmentMap(
               this.fragmentTypeDefs,
             );
