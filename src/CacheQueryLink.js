@@ -2,6 +2,8 @@ import { ApolloLink, Observable } from 'apollo-link';
 import _get from 'lodash/get';
 import _size from 'lodash/size';
 import _castArray from 'lodash/castArray';
+import _omit from 'lodash/omit';
+import _isEmpty from 'lodash/isEmpty';
 
 import gql from 'graphql-tag';
 
@@ -17,6 +19,7 @@ import {
   createTransformerCacheIdValueNode,
   createCachableFragmentMap,
   createConnectionNode,
+  processArgs,
 } from './utils';
 import traverseSelections from './traverse';
 
@@ -94,6 +97,7 @@ class CacheQueryLink extends ApolloLink {
     createCacheReadKey,
     createCacheRemoveKey,
     createConnectionTypename,
+    filterOperatorDirectives,
     fragmentTypeDefs = [],
   }) {
     super();
@@ -108,6 +112,8 @@ class CacheQueryLink extends ApolloLink {
       createConnectionTypename || this._defaultCreateConnectionTypename;
     //
     this.fragmentTypeDefs = fragmentTypeDefs;
+    this.filterOperatorDirectives =
+      filterOperatorDirectives;
   }
 
   _defaultCreateCacheReadKey = ({ typename }) => {
@@ -283,6 +289,7 @@ class CacheQueryLink extends ApolloLink {
 
   _typeResolver = ({ typename, fragment, name } = {}, { info } = {}) => {
     const localCacheKey = this.createCacheReadKey({ typename });
+
     //TODO ask for fragment
     const query = gql`
       query fetchResult{
@@ -304,8 +311,20 @@ class CacheQueryLink extends ApolloLink {
 
     try {
       const data = cache.readQuery({ query });
+
       if (data.result) {
         result = data.result;
+      }
+      const filterDirective = _omit(
+        _get(info, ['directives', 'filter'], {}),
+        'with',
+      );
+      if (data.result && !_isEmpty(filterDirective)) {
+        result = processArgs(
+          data.result,
+          filterDirective,
+          { operators: this.filterOperatorDirectives },
+        );
       }
     } catch (ex) {}
 

@@ -6,7 +6,7 @@ import _isArray from 'lodash/isArray';
 import _get from 'lodash/get';
 
 import CacheQueryLink from './CacheQueryLink';
-import FilterDirectiveLink from './FilterDirectiveLink';
+import WithFilterDirectiveLink from './WithFilterDirectiveLink';
 import { withClientState } from 'apollo-link-state';
 
 function createJoinKey({ cacheQueryLink, typename, joinKey } = {}) {
@@ -15,16 +15,29 @@ function createJoinKey({ cacheQueryLink, typename, joinKey } = {}) {
   })}By${joinKey}`;
 }
 
+const DEFAULT_OPERATORS = {
+  eq: (operand, value) => operand === value,
+  lt: (operand, value) => operand < value,
+  gt: (operand, value) => operand > value,
+  lte: (operand, value) => operand <= value,
+  gte: (operand, value) => operand >= value,
+};
+
+
 export function createCacheQueryLink({
   stateLinkConfig,
-  filterOperatorDirectives,
+  filterOperatorDirectives  = DEFAULT_OPERATORS,
   joinConnection = {},
   ...config
 }) {
   const cache = stateLinkConfig.cache;
 
-  const cacheQueryLink = new CacheQueryLink({ cache, ...config });
-  const filterDirectiveLink = new FilterDirectiveLink({
+  const cacheQueryLink = new CacheQueryLink({
+    cache,
+    filterOperatorDirectives,
+    ...config,
+  });
+  const filterDirectiveLink = new WithFilterDirectiveLink({
     filterOperatorDirectives,
   });
 

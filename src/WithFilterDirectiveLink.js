@@ -1,5 +1,6 @@
 import { ApolloLink, Observable } from 'apollo-link';
 import graphql from 'graphql-anywhere';
+import _get from 'lodash/get';
 
 import { processArgs } from './utils';
 
@@ -10,16 +11,9 @@ function getResolvedData(resultKey, context, rootValue) {
   return rootValue[resultKey];
 }
 
-const DEFAULT_OPERATORS = {
-  eq: (operand, value) => operand === value,
-  lt: (operand, value) => operand < value,
-  gt: (operand, value) => operand > value,
-  lte: (operand, value) => operand <= value,
-  gte: (operand, value) => operand >= value,
-};
 
-class FilterDirectiveLink extends ApolloLink {
-  constructor({ filterOperatorDirectives = DEFAULT_OPERATORS }) {
+class WithFilterDirectiveLink extends ApolloLink {
+  constructor({ filterOperatorDirectives  } = {}) {
     super();
     this.filterOperatorDirectives = filterOperatorDirectives;
   }
@@ -27,10 +21,11 @@ class FilterDirectiveLink extends ApolloLink {
   _filterResolver = (fieldName, rootValue, args, context, info) => {
     const resultKey = info.resultKey || fieldName;
     const resolvedData = getResolvedData(resultKey, context, rootValue);
-    if (info.directives && info.directives.filter && resolvedData.nodes) {
+    const withFilterDirective = _get(info, ['directives', 'filter', 'with']);
+    if (withFilterDirective && resolvedData.nodes) {
       return processArgs(
         resolvedData,
-        { info },
+        {with: withFilterDirective},
         { operators: this.filterOperatorDirectives },
       );
     }
@@ -77,4 +72,4 @@ class FilterDirectiveLink extends ApolloLink {
   }
 }
 
-export default FilterDirectiveLink;
+export default WithFilterDirectiveLink;

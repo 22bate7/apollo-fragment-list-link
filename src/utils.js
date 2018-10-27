@@ -1,5 +1,6 @@
 import _uniqBy from 'lodash/uniqBy';
 import _get from 'lodash/get';
+import _isEmpty from 'lodash/isEmpty';
 
 import { toIdValue, getFragmentDefinition } from 'apollo-utilities';
 
@@ -160,9 +161,8 @@ function checkWithArgument(item, argInput, argInputKey, applyOperator) {
   return applyOperator(item[fieldKey], operator, argInput[argInputKey]);
 }
 
-export const processArgs = (result, { info } = {}, { operators } = {}) => {
-  const filterDirective = _get(info, ['directives', 'filter']);
-  if (!filterDirective) {
+export const processArgs = (result, filterDirective, { operators } = {}) => {
+  if (_isEmpty(filterDirective)) {
     return result;
   }
   const output = { ...result, nodes: [...result.nodes] };
