@@ -85,7 +85,7 @@ function writeAllFragmentsToCache(
   });
 
   // write data
-  cache.writeData({ data });
+  Promise.resolve(() => cache.writeData({ data }));
 }
 
 /**
@@ -112,8 +112,7 @@ class CacheQueryLink extends ApolloLink {
       createConnectionTypename || this._defaultCreateConnectionTypename;
     //
     this.fragmentTypeDefs = fragmentTypeDefs;
-    this.filterOperatorDirectives =
-      filterOperatorDirectives;
+    this.filterOperatorDirectives = filterOperatorDirectives;
   }
 
   _defaultCreateCacheReadKey = ({ typename }) => {
@@ -320,11 +319,9 @@ class CacheQueryLink extends ApolloLink {
         'with',
       );
       if (data.result && !_isEmpty(filterDirective)) {
-        result = processArgs(
-          data.result,
-          filterDirective,
-          { operators: this.filterOperatorDirectives },
-        );
+        result = processArgs(data.result, filterDirective, {
+          operators: this.filterOperatorDirectives,
+        });
       }
     } catch (ex) {}
 
@@ -347,13 +344,17 @@ class CacheQueryLink extends ApolloLink {
               this.fragmentTypeDefs,
             );
 
-            writeAllFragmentsToCache(this.cache, operation.query, {
-              result: result.data,
-              cachableFragmentMap,
-              variables: operation.variables,
-              context: operation.getContext(),
-              createLocalCacheKey: this.createCacheReadKey,
-              createConnectionTypename: this.createConnectionTypename,
+            new Promise(resolve => {
+              resolve(
+                writeAllFragmentsToCache(this.cache, operation.query, {
+                  result: result.data,
+                  cachableFragmentMap,
+                  variables: operation.variables,
+                  context: operation.getContext(),
+                  createLocalCacheKey: this.createCacheReadKey,
+                  createConnectionTypename: this.createConnectionTypename,
+                }),
+              );
             });
           },
           error: networkError => {
